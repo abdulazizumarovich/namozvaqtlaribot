@@ -1,0 +1,62 @@
+{
+    "alerts": [
+        {
+            "key": "tong",
+            "name": "Tong",
+            "alert_type": "high"
+        },
+        {
+            "key": "quyosh",
+            "name": "Quyosh chiqishi",
+            "alert_type": "high"
+        },
+        {
+            "key": "peshin",
+            "name": "Peshin",
+            "alert_type": "high"
+        },
+        {
+            "key": "asr",
+            "name": "Asr",
+            "alert_type": "high"
+        },
+        {
+            "key": "shom",
+            "name": "Shom",
+            "alert_type": "high"
+        },
+        {
+            "key": "xufton",
+            "name": "Xufton",
+            "alert_type": "high"
+        }
+    ],
+    "alert_types": [
+        {
+            "type": "high",
+            "reminders_before": [
+                0,
+                5,
+                10,
+                15
+            ]
+        },
+        {
+            "type": "medium",
+            "reminders_before": [
+                0,
+                15
+            ]
+        },
+        {
+            "type": "low",
+            "reminders_before": [
+                0
+            ]
+        },
+        {
+            "type": "silent",
+            "reminders_before": []
+        }
+    ]
+}

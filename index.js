@@ -1,83 +1,98 @@
-const express = require("express")
-const app = express()
-const { default: axios } = require("axios")
-const HtmlTableToJson = require("html-table-to-json")
-const { parse } = require("node-html-parser")
-const regions = require("./regions.json")
-const months = require("./months.json")
-const port = process.env.PORT
-app.use(express.json())
+const { Telegraf } = require('telegraf');
+const schedule = require('node-schedule');
+const dotenv = require('dotenv');
+const data = require('./data.js')
+const settings = require('./reminder_settings.json');
 
-app.get("/", (req, res) => {
-  res.send(
-    `<h1>Welcome our API! <br/> <a href="https://github.com/zero8d/namozvaqtlariapi/">Read API documentation</a></h1>`
-  )
-})
-app.get("/api/monthly/", async (req, res) => {
-  let { region, month } = req.body
-  month = Number(month)
-  if (!region) {
-    res.status(403)
-    return res.json({ status: "error", message: "Invalid region" })
-  }
-  if (!month) {
-    res.status(403)
-    return res.json({ status: "error", message: "Bad request" })
-  }
-  region = capitalize(region)
-  try {
-    const respData = await getData(regions[region], month)
-    res.send(respData)
-  } catch (error) {
-    res.status(503)
-    res.json(error)
-  }
-})
+dotenv.config();
+const bot = new Telegraf(process.env.BOT_TOKEN);
+const chatID = process.env.CHAT_ID;
 
-app.get("/api/daily/", async (req, res) => {
-  let { region, month, day } = req.body
-  month = Number(month)
-  day = Number(day)
-  if (!region) {
-    res.status(403)
-    return res.json({ status: "error", message: "Invalid region" })
-  }
-  if (!month || !day) {
-    res.status(403)
-    return res.json({ status: "Error", message: "Bad request" })
-  }
-  region = capitalize(region)
-  try {
-    const readyData = await getData(regions[region], month)
-    const respData = readyData.find(date => {
-      return date[months[month]] == day
-    })
+let currentData = {}
 
-    res.send(respData)
-  } catch (err) {
-    res.json(err)
-  }
-})
-
-app.listen(port)
-
-async function getData(region, month) {
-  const resData = await axios.get(`https://islom.uz/vaqtlar/${region}/${month}`)
-  const parsedD = parse(resData.data)
-  const tableHead = parsedD
-    .querySelector("thead")
-    .toString()
-    .replace("thead", "th")
-    .replace("thead", "th")
-  const tableBody = parsedD
-    .querySelector("tbody")
-    .toString()
-    .replace("12<tr", "<tr")
-  const tableString = `<table>${tableHead}${tableBody}</table>`
-  const tableObj = HtmlTableToJson.parse(tableString).results[0]
-  return tableObj
+function createReminderObjects(todayData) {
+  const dateToday = new Date();
+  dateToday.setSeconds(0);
+  dateToday.setMilliseconds(0);
+  return Object.entries(todayData)
+    .filter(([key]) => key != 'sana')
+    .map(([key, time]) => {
+      const [hours, minutes] = time.split(':').map(Number);
+      const date = new Date(dateToday);
+      date.setHours(hours);
+      date.setMinutes(minutes);
+      return { key, date };
+    });
 }
 
-function capitalize(string) {
-  return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase()
+function sendTimeAlerts(todayData) {
+  if (!todayData || todayData.length === 0) {
+    console.log('No data')
+    bot.telegram.sendMessage(chatID, 'Ey, loglarga qara!');
+    return;
+  }
+
+  bot.telegram.sendMessage(chatID, prettyInfo())
+
+  const now = new Date();
+  todayData.forEach(({ date, key }) => {
+    const alert = settings.alerts.find(alert => alert.key === key)
+    const alertType = settings.alert_types.find(alert_type => alert_type.type == alert.alert_type)
+    alertType.reminders_before.forEach(reminder => {
+      const reminderDate = new Date(date.getTime() - reminder * 60 * 1000);
+      if (reminderDate > now) {
+        schedule.scheduleJob(reminderDate, () => {
+          let reminderMessage = ''
+
+          if (reminder == 0) {
+            if (key == 'quyosh')
+              reminderMessage = 'Quyosh chiqdiyov oynadan qarachi'
+            else
+              reminderMessage = `Kirgan kirdi. ${alert.name} vaqti bo'ldi`;
+          } else {
+            reminderMessage = `${alert.name}ga ${reminder} daqiqa qoldi`;
+            if (key != 'quyosh')
+              reminderMessage = '🍇 Uzumlar chayilganmi? ' + reminderMessage
+          }
+
+          bot.telegram.sendMessage(chatID, reminderMessage);
+        });
+      }
+    });
+  });
 }
+
+function prettyInfo() {
+  if (!currentData) return 'Nimadir xatomi diymanda'
+  return currentData.sana.split('|')[1].trim() + '\n' +
+    currentData.sana.split('|')[0].trim() + '\n\n' +
+    Object.entries(currentData)
+      .filter(([key]) => key != 'sana')
+      .map(([key, time]) => {
+        const alert = settings.alerts.find(alert => alert.key == key)
+        return `${alert.name}: ${time} (${alert.alert_type})`
+      }).join('\n')
+}
+
+async function start() {
+  try {
+    console.log('Setting scheduler for today\'s reminders')
+    currentData = await data.today();
+    const timeDates = createReminderObjects(currentData);
+    sendTimeAlerts(timeDates);
+    console.log('Scheduler is set')
+  } catch (e) {
+    console.log(e)
+    bot.telegram.sendMessage(chatID, 'Ey, loglarga qara!')
+  }
+}
+
+schedule.scheduleJob('0 0 9 * * *', () => start());
+
+bot.start((ctx) => {
+  ctx.reply(prettyInfo())
+});
+
+bot.launch();
+
+start()
