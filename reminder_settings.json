@@ -3,17 +3,17 @@
         {
             "key": "tong",
             "name": "Tong",
-            "alert_type": "high"
+            "alert_type": "silent"
         },
         {
             "key": "quyosh",
             "name": "Quyosh chiqishi",
-            "alert_type": "high"
+            "alert_type": "silent"
         },
         {
             "key": "peshin",
             "name": "Peshin",
-            "alert_type": "high"
+            "alert_type": "silent"
         },
         {
             "key": "asr",
@@ -58,5 +58,10 @@
             "type": "silent",
             "reminders_before": []
         }
+    ],
+    "inactive_week_days": [
+        "Saturday",
+        "Sunday"
     ]
+    "reset_hour":9
 }
