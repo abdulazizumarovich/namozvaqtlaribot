@@ -10,7 +10,7 @@ const bot = new Telegraf(process.env.BOT_TOKEN)
 const chatID = process.env.CHAT_ID
 const port = process.env.PORT || 5500
 //on or off
-const startupInfo = process.env.STARTUP_INFO
+const startupInfo = process.env.STARTUP_INFO || 'off'
 
 /**
  * Just for heroku to continue web app's running state
@@ -113,7 +113,7 @@ async function start() {
   }
 }
 
-schedule.scheduleJob(`0 0 ${settings.reset_hour} * * *`, () => start())
+schedule.scheduleJob(settings.scheduler_expresion, () => start())
 
 bot.start((ctx) => {
   ctx.reply(prettyInfo())
