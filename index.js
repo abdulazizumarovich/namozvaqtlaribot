@@ -28,7 +28,7 @@ app.post(`/${process.env.BOT_TOKEN}`, (req, res) => {
 });
 
 app.listen(port, () => {
-	console.log(`\n\nKirgan kirdi web serveri. port: ${port}.\n\n`);
+	console.log(`Kirgan kirdi web serveri. port: ${port}`);
 });
 //heroku end
 
@@ -113,7 +113,8 @@ async function start() {
   }
 }
 
-schedule.scheduleJob(settings.scheduler_expresion, () => start())
+let job = schedule.scheduleJob(settings.scheduler_expresion, () => start())
+console.log('Next schedule time: ' + job.nextInvocation().toString())
 
 bot.start((ctx) => {
   ctx.reply(prettyInfo())
