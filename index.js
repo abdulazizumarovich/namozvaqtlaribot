@@ -14,7 +14,7 @@ const startupInfo = process.env.STARTUP_INFO || 'off'
 
 /**
  * Just for heroku to continue web app's running state
- */
+ 
 const app = express()
 app.use(express.json())
 
@@ -31,6 +31,7 @@ app.listen(port, () => {
 	console.log(`Kirgan kirdi web serveri. port: ${port}`);
 });
 //heroku end
+*/
 
 let currentData = {}
 
