@@ -1,6 +1,5 @@
 const { Telegraf } = require('telegraf')
 const schedule = require('node-schedule')
-const express = require('express')
 require('dotenv').config()
 
 const data = require('./data.js')
@@ -8,30 +7,8 @@ const settings = require('./reminder_settings.json')
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 const chatID = process.env.CHAT_ID
-const port = process.env.PORT || 5500
 //on or off
 const startupInfo = process.env.STARTUP_INFO || 'off'
-
-/**
- * Just for heroku to continue web app's running state
- 
-const app = express()
-app.use(express.json())
-
-app.get('/', (req, res) => {
-	res.status(200).json({ message: 'Kirgan kirdi telegram bot ishlayapti.'});
-});
-// TELEGRAM WEBHOOK - https://core.telegram.org/bots/api#setwebhook
-app.post(`/${process.env.BOT_TOKEN}`, (req, res) => {
-	bot.processUpdate(req.body);
-	res.status(200).json({ message: 'ok' });
-});
-
-app.listen(port, () => {
-	console.log(`Kirgan kirdi web serveri. port: ${port}`);
-});
-//heroku end
-*/
 
 let currentData = {}
 
