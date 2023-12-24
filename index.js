@@ -113,7 +113,7 @@ async function start() {
   }
 }
 
-schedule.scheduleJob(`0 0 ${settings.reset_hour || 1} * * *`, () => start())
+schedule.scheduleJob(`0 0 ${settings.reset_hour} * * *`, () => start())
 
 bot.start((ctx) => {
   ctx.reply(prettyInfo())
