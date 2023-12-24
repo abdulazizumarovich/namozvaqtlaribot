@@ -9,6 +9,8 @@ const settings = require('./reminder_settings.json')
 const bot = new Telegraf(process.env.BOT_TOKEN)
 const chatID = process.env.CHAT_ID
 const port = process.env.PORT || 5500
+//on or off
+const startupInfo = process.env.STARTUP_INFO
 
 /**
  * Just for heroku to continue web app's running state
@@ -54,8 +56,10 @@ function sendTimeAlerts(todayData) {
     return
   }
 
-  bot.telegram.sendMessage(chatID, prettyInfo())
-
+  bot.telegram.sendMessage(chatID, 'Bot ishga tushdi')
+  if (startupInfo == 'on')
+    bot.telegram.sendMessage(chatID, prettyInfo())
+	
   const now = new Date()
   todayData.forEach(({ date, key }) => {
     const alert = settings.alerts.find(alert => alert.key === key)
@@ -109,7 +113,7 @@ async function start() {
   }
 }
 
-schedule.scheduleJob('0 0 9 * * *', () => start())
+schedule.scheduleJob(`0 0 ${settings.reset_hour || 1} * * *`, () => start())
 
 bot.start((ctx) => {
   ctx.reply(prettyInfo())
