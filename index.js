@@ -29,7 +29,7 @@ function createReminderObjects(todayData) {
     })
 }
 
-function sendTimeAlerts(todayData, startupCall) {
+async function sendTimeAlerts(todayData, startupCall) {
   if (!todayData || todayData.length === 0) {
     console.log('No data')
     bot.telegram.sendMessage(chatID, 'Ey, loglarga qara!')
@@ -38,7 +38,7 @@ function sendTimeAlerts(todayData, startupCall) {
 
   if (startupCall) {
     if (startupInfo == 'on') bot.telegram.sendMessage(chatID, 'Bot ishga tushdi')
-  } else bot.telegram.sendMessage(chatID, `Ma'lumotlar yangilandi:\n\n ${prettyInfo()}`)
+  } else bot.telegram.sendMessage(chatID, `Ma'lumotlar yangilandi:\n\n ${await prettyInfo()}`)
 
   const now = new Date()
   todayData.forEach(({ date, key }) => {
