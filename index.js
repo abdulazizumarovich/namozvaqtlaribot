@@ -1,5 +1,7 @@
 const { Telegraf } = require('telegraf')
 const schedule = require('node-schedule')
+const parser = require('cron-parser')
+
 require('dotenv').config()
 
 const data = require('./data.js')
@@ -10,7 +12,7 @@ const chatID = process.env.CHAT_ID
 //on or off
 const startupInfo = process.env.STARTUP_INFO || 'off'
 
-let currentData = {}
+let currentData
 
 function createReminderObjects(todayData) {
   const dateToday = new Date()
@@ -27,17 +29,17 @@ function createReminderObjects(todayData) {
     })
 }
 
-function sendTimeAlerts(todayData) {
+function sendTimeAlerts(todayData, startupCall) {
   if (!todayData || todayData.length === 0) {
     console.log('No data')
     bot.telegram.sendMessage(chatID, 'Ey, loglarga qara!')
     return
   }
 
-  bot.telegram.sendMessage(chatID, 'Bot ishga tushdi')
-  if (startupInfo == 'on')
-    bot.telegram.sendMessage(chatID, prettyInfo())
-	
+  if (startupCall) {
+    if (startupInfo == 'on') bot.telegram.sendMessage(chatID, 'Bot ishga tushdi')
+  } else bot.telegram.sendMessage(chatID, `Ma'lumotlar yangilandi:\n\n ${prettyInfo()}`)
+
   const now = new Date()
   todayData.forEach(({ date, key }) => {
     const alert = settings.alerts.find(alert => alert.key === key)
@@ -66,8 +68,10 @@ function sendTimeAlerts(todayData) {
   })
 }
 
-function prettyInfo() {
-  if (!currentData) return 'Nimadir xatomi diymanda'
+async function prettyInfo() {
+  if (!currentData) {
+    currentData = await data.today()
+  }
   return currentData.sana.split('|')[1].trim() + '\n' +
     currentData.sana.split('|')[0].trim() + '\n\n' +
     Object.entries(currentData)
@@ -75,15 +79,15 @@ function prettyInfo() {
       .map(([key, time]) => {
         const alert = settings.alerts.find(alert => alert.key == key)
         return `${alert.name}: ${time} (${alert.alert_type})`
-      }).join('\n')
+      }).join('\n') + '\n\n© islom.uz'
 }
 
-async function start() {
+async function start(startupCall = false) {
   try {
     console.log('Setting scheduler for today\'s reminders')
     currentData = await data.today()
     const timeDates = createReminderObjects(currentData)
-    sendTimeAlerts(timeDates)
+    sendTimeAlerts(timeDates, startupCall)
     console.log('Scheduler is set')
   } catch (e) {
     console.log(e)
@@ -91,13 +95,28 @@ async function start() {
   }
 }
 
-let job = schedule.scheduleJob(settings.scheduler_expresion, () => start())
-console.log('Next schedule time: ' + job.nextInvocation().toString())
+const job = schedule.scheduleJob(settings.scheduler_expresion, () => start())
+
+function checkStartupSet() {
+  const today = new Date().getDay()
+  const expectedDays = parser.parseExpression(settings.scheduler_expresion).fields.dayOfWeek
+  const scheduledDay = job.nextInvocation().getDay()
+
+  if (expectedDays.includes(today) && scheduledDay != today) {
+    start(true)
+  } else {
+    console.log('Manually start not needed, next invocation is: ' + job.nextInvocation().toString())
+  }
+}
 
 bot.start((ctx) => {
-  ctx.reply(prettyInfo())
+  ctx.reply('Ma\'lumot uchun: /info')
+})
+
+bot.command('info', async (ctx) => {
+  ctx.reply(await prettyInfo())
 })
 
 bot.launch()
 
-start()
+checkStartupSet()
