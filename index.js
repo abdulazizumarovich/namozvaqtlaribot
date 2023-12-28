@@ -36,9 +36,13 @@ async function sendTimeAlerts(todayData, startupCall) {
     return
   }
 
+  const info = `Ma'lumotlar yangilandi:\n\n ${await prettyInfo()}`
+  console.log(`startupCall: ${startupCall}, startupInfo: ${startupInfo}`)
+  console.log(info)
+
   if (startupCall) {
     if (startupInfo == 'on') bot.telegram.sendMessage(chatID, 'Bot ishga tushdi')
-  } else bot.telegram.sendMessage(chatID, `Ma'lumotlar yangilandi:\n\n ${await prettyInfo()}`)
+  } else bot.telegram.sendMessage(chatID, info)
 
   const now = new Date()
   todayData.forEach(({ date, key }) => {
