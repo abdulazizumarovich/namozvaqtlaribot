@@ -59,5 +59,14 @@
             "reminders_before": []
         }
     ],
-    "scheduler_expresion": "0 12 * * MON-FRI"
+    "scheduler_expresion": "0 12 * * MON-FRI",
+    "source":"aladhan",
+    "islom": {
+        "region": 27
+    },
+    "aladhan": {
+        "latitude": 41.273266,
+        "longitude": 69.225866,
+        "method": 3
+    }
 }

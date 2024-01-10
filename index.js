@@ -19,7 +19,7 @@ function createReminderObjects(todayData) {
   dateToday.setSeconds(0)
   dateToday.setMilliseconds(0)
   return Object.entries(todayData)
-    .filter(([key]) => key != 'sana')
+    .filter(([key]) => key !== 'sana' && key !== 'manba')
     .map(([key, time]) => {
       const [hours, minutes] = time.split(':').map(Number)
       const date = new Date(dateToday)
@@ -32,7 +32,7 @@ function createReminderObjects(todayData) {
 async function sendTimeAlerts(todayData, startupCall) {
   if (!todayData || todayData.length === 0) {
     console.log('No data')
-    bot.telegram.sendMessage(chatID, 'Ey, loglarga qara!')
+    sendMessage('Xatolik!')
     return
   }
 
@@ -41,17 +41,17 @@ async function sendTimeAlerts(todayData, startupCall) {
   console.log(info)
 
   if (startupCall) {
-    if (startupInfo == 'on') bot.telegram.sendMessage(chatID, 'Bot ishga tushdi')
-  } else bot.telegram.sendMessage(chatID, info)
+    if (startupInfo == 'on') sendMessage('Bot ishga tushdi')
+  } else sendMessage(info)
 
   const now = new Date()
   todayData.forEach(({ date, key }) => {
     const alert = settings.alerts.find(alert => alert.key === key)
-    const alertType = settings.alert_types.find(alert_type => alert_type.type == alert.alert_type)
+    const alertType = settings.alert_types.find(alert_type => alert_type.type === alert.alert_type)
     alertType.reminders_before.forEach(reminder => {
       const reminderDate = new Date(date.getTime() - reminder * 60 * 1000)
       if (reminderDate > now) {
-        schedule.scheduleJob(reminderDate, () => {
+        schedule.scheduleJob(reminderDate, async () => {
           let reminderMessage = ''
 
           if (reminder == 0) {
@@ -61,41 +61,65 @@ async function sendTimeAlerts(todayData, startupCall) {
               reminderMessage = `Kirgan kirdi. ${alert.name} vaqti bo'ldi`
           } else {
             reminderMessage = `${alert.name}ga ${reminder} daqiqa qoldi`
-            if (key != 'quyosh')
-              reminderMessage = '🍇 Uzumlar chayilganmi? ' + reminderMessage
+            //if (key != 'quyosh')
+            //reminderMessage = '🍇 Uzumlar chayilganmi? ' + reminderMessage
           }
 
-          bot.telegram.sendMessage(chatID, reminderMessage)
+          sendMessage(reminderMessage)
         })
       }
     })
   })
 }
 
+async function sendMessage(message) {
+  try {
+    await bot.telegram.sendMessage(chatID, message)
+  } catch(e) {
+    console.log(e)
+  }
+}
+
+async function today() {
+  if (settings.source == "islom")
+    return await data.islom(settings.islom.region)
+  else if (settings.source == "aladhan") {
+    const config = settings.aladhan
+    return await data.aladhan(
+      config.latitude,
+      config.longitude,
+      config.method
+    )
+  } else {
+    console.log('Source is not correct')
+    return null
+  }
+}
+
 async function prettyInfo() {
   if (!currentData) {
-    currentData = await data.today()
+    currentData = await today()
   }
   return currentData.sana.split('|')[1].trim() + '\n' +
     currentData.sana.split('|')[0].trim() + '\n\n' +
     Object.entries(currentData)
-      .filter(([key]) => key != 'sana')
+      .filter(([key]) => key !== 'sana' && key !== 'manba')
       .map(([key, time]) => {
         const alert = settings.alerts.find(alert => alert.key == key)
         return `${alert.name}: ${time} (${alert.alert_type})`
-      }).join('\n') + '\n\n© islom.uz'
+      }).join('\n') + `\n\n© ${currentData.manba}`
 }
 
 async function start(startupCall = false) {
   try {
     console.log('Setting scheduler for today\'s reminders')
-    currentData = await data.today()
+    currentData = await today()
     const timeDates = createReminderObjects(currentData)
     sendTimeAlerts(timeDates, startupCall)
     console.log('Scheduler is set')
   } catch (e) {
     console.log(e)
-    bot.telegram.sendMessage(chatID, 'Ey, loglarga qara!')
+    bot.telegram.sendMessage('Xatolik!')
   }
 }
 
