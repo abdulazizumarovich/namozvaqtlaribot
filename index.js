@@ -1,8 +1,9 @@
 const { Telegraf } = require('telegraf')
 const schedule = require('node-schedule')
 const parser = require('cron-parser')
+const path = require('path'); 
 
-require('dotenv').config()
+require('dotenv').config({path: path.join(__dirname, '.env') })
 
 const data = require('./data.js')
 const settings = require('./reminder_settings.json')
@@ -19,7 +20,7 @@ function createReminderObjects(todayData) {
   dateToday.setSeconds(0)
   dateToday.setMilliseconds(0)
   return Object.entries(todayData)
-    .filter(([key]) => key !== 'sana' && key !== 'manba')
+    .filter(([key]) => !['sana', 'manba', 'juma'].includes(key))
     .map(([key, time]) => {
       const [hours, minutes] = time.split(':').map(Number)
       const date = new Date(dateToday)
@@ -51,7 +52,7 @@ async function sendTimeAlerts(todayData, startupCall) {
     alertType.reminders_before.forEach(reminder => {
       const reminderDate = new Date(date.getTime() - reminder * 60 * 1000)
       if (reminderDate > now) {
-        schedule.scheduleJob(reminderDate, async () => {
+        schedule.scheduleJob(`${key}-${reminder}`, reminderDate, async () => {
           let reminderMessage = ''
 
           if (reminder == 0) {
@@ -67,6 +68,7 @@ async function sendTimeAlerts(todayData, startupCall) {
 
           sendMessage(reminderMessage)
         })
+        schedule.cancelJob("")
       }
     })
   })
@@ -103,14 +105,23 @@ async function prettyInfo() {
   return currentData.sana.split('|')[1].trim() + '\n' +
     currentData.sana.split('|')[0].trim() + '\n\n' +
     Object.entries(currentData)
-      .filter(([key]) => key !== 'sana' && key !== 'manba')
+      .filter(([key]) => !['sana', 'manba', 'juma'].includes(key))
       .map(([key, time]) => {
         const alert = settings.alerts.find(alert => alert.key == key)
-        return `${alert.name}: ${time} (${alert.alert_type})`
+        let name = alert.name
+        if (currentData.juma && "name_on_friday" in alert) {
+          name = alert.name_on_friday
+        }
+
+        return `${name}: ${time} (${alert.alert_type})`
       }).join('\n') + `\n\n© ${currentData.manba}`
 }
 
 async function start(startupCall = false) {
+  if (ignoreMainJob) {
+    ignoreMainJob = false
+    return
+  }
   try {
     console.log('Setting scheduler for today\'s reminders')
     currentData = await today()
@@ -123,7 +134,8 @@ async function start(startupCall = false) {
   }
 }
 
-const job = schedule.scheduleJob(settings.scheduler_expresion, () => start())
+let ignoreMainJob = false
+const job = schedule.scheduleJob("main", settings.scheduler_expresion, () => start())
 
 function checkStartupSet() {
   const today = new Date().getDay()
@@ -138,13 +150,38 @@ function checkStartupSet() {
 }
 
 bot.start((ctx) => {
+  console.log('Command: start')
   ctx.reply('Ma\'lumot uchun: /info')
 })
 
 bot.command('info', async (ctx) => {
+  console.log('Command: info')
   ctx.reply(await prettyInfo())
 })
 
-bot.launch()
+bot.command('dayoff', async (ctx) => {
+  console.log('Command: dayoff')
+  let length = Object.getOwnPropertyNames(schedule.scheduledJobs).length
+  console.log("Job count: " + length)
 
-checkStartupSet()
+  if (length == 1) {
+    ignoreMainJob = true
+    console.log("Todays main scheduler is ignored")
+  } else {
+    for (const jobName in schedule.scheduledJobs) {
+      console.log("Job: " + jobName)
+      if (jobName != "main")
+        schedule.cancelJob(jobName)
+    }
+    console.log("Job count: " + Object.getOwnPropertyNames(schedule.scheduledJobs).length)
+  }
+  
+  ctx.reply("Tushunarli")
+})
+
+setTimeout(() => {
+    bot.launch()
+    checkStartupSet()
+}, 5000)
+
+

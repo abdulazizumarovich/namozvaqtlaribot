@@ -13,6 +13,7 @@
         {
             "key": "peshin",
             "name": "Peshin",
+            "name_on_friday": "Juma",
             "alert_type": "silent"
         },
         {
@@ -23,12 +24,12 @@
         {
             "key": "shom",
             "name": "Shom",
-            "alert_type": "high"
+            "alert_type": "silent"
         },
         {
             "key": "xufton",
             "name": "Xufton",
-            "alert_type": "high"
+            "alert_type": "silent"
         }
     ],
     "alert_types": [
@@ -59,8 +60,8 @@
             "reminders_before": []
         }
     ],
-    "scheduler_expresion": "0 12 * * MON-FRI",
-    "source":"aladhan",
+    "scheduler_expresion": "00 12 * * MON-FRI",
+    "source":"islom",
     "islom": {
         "region": 27
     },
